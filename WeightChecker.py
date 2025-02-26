@@ -34,6 +34,7 @@ class ModernStyle(ttk.Style):
 class SizeAnalyzerApp:
     def __init__(self, root, initial_path=None, recursive=True):
         self.root = root
+        self.root.title("WeightChecker")
         self.style = ModernStyle()
         self.recursive = recursive
         self.initial_path = initial_path
@@ -275,6 +276,7 @@ class SizeAnalyzerApp:
 
     def open_new_window(self, path):
         new_window = tk.Toplevel(self.root)
+        new_window.title("WeightChecker subwindow")
         SizeAnalyzerApp(new_window, initial_path=path, recursive=False)
 
     def open_in_explorer(self, path):
