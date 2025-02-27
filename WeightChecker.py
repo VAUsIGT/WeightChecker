@@ -1,10 +1,11 @@
 import os
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 from threading import Thread, Event
 from queue import Queue, Empty
 import platform
 import subprocess
+import shutil
 
 
 def convert_size(size_bytes):
@@ -272,7 +273,61 @@ class SizeAnalyzerApp:
             path = self.tree.item(item, 'tags')[0]
             menu = tk.Menu(self.root, tearoff=0)
             menu.add_command(label="Открыть в проводнике", command=lambda: self.open_in_explorer(path))
+            menu.add_command(label="Переименовать", command=lambda: self.rename_selected_item(item, path))
+            menu.add_command(label="Удалить", command=lambda: self.delete_selected_item(item, path))
             menu.post(event.x_root, event.y_root)
+
+    def delete_selected_item(self, item, path):
+        if not messagebox.askyesno("Подтверждение", "Вы уверены, что хотите удалить этот элемент?"):
+            return
+
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+
+            # Обновляем данные
+            self.data = [x for x in self.data if x[3] != path]
+            self.processed_paths.discard(path)
+
+            # Обновляем отображение
+            self.update_sort()
+            self.update_treeview()
+            messagebox.showinfo("Успех", "Элемент успешно удален")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось удалить: {str(e)}")
+
+    def rename_selected_item(self, item, old_path):
+        new_name = simpledialog.askstring(
+            "Переименование",
+            "Введите новое имя:",
+            initialvalue=os.path.basename(old_path)
+        )
+
+        if not new_name:
+            return
+
+        try:
+            new_path = os.path.join(os.path.dirname(old_path), new_name)
+            os.rename(old_path, new_path)
+
+            # Обновляем данные
+            for i, entry in enumerate(self.data):
+                if entry[3] == old_path:
+                    rel_path = os.path.relpath(new_path, self.path_entry.get()) if self.recursive else new_name
+                    self.data[i] = (entry[0], rel_path, entry[2], new_path)
+
+            self.processed_paths.discard(old_path)
+            self.processed_paths.add(new_path)
+
+            self.update_sort()
+            self.update_treeview()
+            messagebox.showinfo("Успех", "Элемент успешно переименован")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось переименовать: {str(e)}")
 
     def open_new_window(self, path):
         new_window = tk.Toplevel(self.root)
